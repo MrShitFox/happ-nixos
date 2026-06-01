@@ -13,7 +13,17 @@ cd /etc/nixos
 git clone https://github.com/MrShitFox/happ-nixos
 ```
 
-Add the following line to your main `configuration.nix`:
+Import the module in your `configuration.nix`:
+
+```nix
+imports =
+  [
+    ./hardware-configuration.nix
+    ./happ-nixos/happ-module.nix
+  ];
+```
+
+Enable the service:
 
 ```nix
 services.happ.enable = true;
@@ -27,6 +37,8 @@ sudo nixos-rebuild switch
 
 ## Updating
 
+Pull the latest changes and rebuild your system:
+
 ```bash
 cd /etc/nixos/happ-nixos
 git pull
@@ -38,4 +50,4 @@ sudo nixos-rebuild switch
 
 * ✅ Core functionality works
 * ❌ Hysteria2 is currently not working
-* ⚠️ The project is still a work in progress(~~or maybe not~~)
+* ⚠️ The project is still a work in progress (~~or maybe not~~)
