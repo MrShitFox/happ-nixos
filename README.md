@@ -75,6 +75,18 @@ sudo nixos-rebuild switch
   license unset, so `allowUnfree` is not required.
 - Unofficial community module — not affiliated with the Happ project.
 
+### Security trade-offs
+
+- `happd` runs as **root with no systemd sandboxing** (no `ProtectSystem`,
+  `PrivateTmp`, etc.) — hardening it breaks the machine-id bind mount TUN mode
+  needs (see the HWID fix above).
+- `networking.firewall.checkReversePath` is set to `"loose"` **system-wide**
+  (not scoped to the TUN interface) — required for the asymmetric routing TUN
+  mode produces.
+
+Both are deliberate and required for TUN mode to work; don't sandbox `happd` or
+tighten `checkReversePath` without re-testing that TUN still connects.
+
 ## License
 
 [GPL-3.0](LICENSE) — see the LICENSE file.

@@ -22,11 +22,11 @@ let
 in
 pkgs.stdenv.mkDerivation rec {
   pname = "happ-desktop";
-  version = "2.18.3";
+  version = "3.1.0";
 
   src = pkgs.fetchurl {
     url = "https://github.com/Happ-proxy/happ-desktop/releases/download/${version}/Happ.linux.x64.deb";
-    sha256 = "x2G4RCroEWT/FpjjXrCncVoYhkb5zJ0Ckwd10sC5QxQ=";
+    sha256 = "j/rrUKSpjI2ly0o1WxcIPLc0rId6ZRRhc7AI3nGTVgM=";
   };
 
   nativeBuildInputs = with pkgs; [
@@ -36,10 +36,17 @@ pkgs.stdenv.mkDerivation rec {
     qt6.wrapQtAppsHook
   ];
 
+  # The vendor binaries ship their own complete, qt.conf-configured Qt6 runtime
+  # and plugin tree, so wrapQtAppsHook's automatic postFixup wrapping is not
+  # wanted here -- it would inject an unrelated nixpkgs Qt6 build's plugin path
+  # into $out/bin/happ, stacking a second wrapper on top of the manual
+  # wrapProgram call below. Keep the hook only to satisfy Qt's build-time
+  # qtPreHook check (it errors if a Qt dependency is present without either
+  # the hook or this flag).
+  dontWrapQtApps = true;
+
   buildInputs = with pkgs; [
     stdenv.cc.cc.lib
-    glib
-    dbus
     libGL
     libX11
     libSM

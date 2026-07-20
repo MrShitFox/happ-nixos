@@ -51,18 +51,21 @@ in
     networking.firewall.trustedInterfaces = [ cfg.tunInterface ];
     boot.kernelModules = [ "tun" ];
 
-    # Happ hard-codes /opt/happ for its binaries and writable runtime data, so we
-    # materialise the immutable Nix store tree there. The copy runs only when the
-    # package changes, keeping everyday rebuilds fast.
+    # Happ hard-codes /opt/happ for its binaries, so we materialise the immutable
+    # Nix store tree there. The copy runs only when the package changes, keeping
+    # everyday rebuilds fast. Happ's actual runtime state (routing, generated core
+    # configs) lives per-user under ~/.config/Happ, not under /opt/happ, so the
+    # materialised tree only needs to be readable/executable, never writable --
+    # making it world-writable would let any unprivileged local user replace the
+    # happd binary that systemd runs as root below.
     system.activationScripts.happ-opt = stringAfter [ "stdio" ] ''
       stamp=/opt/happ/.nix-store-path
       if [ "$(cat "$stamp" 2>/dev/null)" != "${cfg.package}" ]; then
         rm -rf /opt/happ
         mkdir -p /opt/happ
         cp -r ${cfg.package}/happ/. /opt/happ/
-        # Happ writes runtime data (routing, generated core configs) back into
-        # /opt/happ, so it must stay writable by the desktop user.
-        chmod -R 0777 /opt/happ
+        chown -R root:root /opt/happ
+        chmod -R u=rwX,go=rX /opt/happ
         printf '%s' "${cfg.package}" > "$stamp"
       fi
     '';
@@ -72,6 +75,10 @@ in
       description = "Happ Process Control Daemon";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
+      # ExecStart is a fixed /opt/happ path rather than a Nix store path, so
+      # switch-to-configuration can't see a package bump from the unit alone;
+      # without this, happd would keep running the old binary after an upgrade.
+      restartTriggers = [ cfg.package ];
 
       path = with pkgs; [ iproute2 iptables procps net-tools ];
 
