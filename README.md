@@ -1,5 +1,7 @@
 # happ-nixos
 
+English | [Русский](README.ru.md)
+
 > Run the [Happ](https://github.com/Happ-proxy/happ-desktop) proxy client on NixOS — packaged properly, with a working HWID.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
@@ -39,6 +41,13 @@ Import the module and enable it in your `configuration.nix`:
 Rebuild, then launch **Happ** from your app menu (or run `happ`):
 
 ```bash
+sudo nixos-rebuild switch
+```
+
+## Updating
+
+```bash
+cd /etc/nixos/happ-nixos && sudo git pull
 sudo nixos-rebuild switch
 ```
 
@@ -88,13 +97,6 @@ services.happ.forceSoftwareRendering = true;
 
 This is independent of `forceXwayland`: it forces Qt Quick to render in
 software regardless of which platform backend (Wayland or XCB) is active.
-
-## Updating
-
-```bash
-cd /etc/nixos/happ-nixos && sudo git pull
-sudo nixos-rebuild switch
-```
 
 ## Notes
 
