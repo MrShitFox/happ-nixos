@@ -10,9 +10,35 @@ in
 
     package = mkOption {
       type = types.package;
-      default = pkgs.callPackage ./happ.nix { };
+      default = pkgs.callPackage ./happ.nix { inherit (cfg) forceXwayland forceSoftwareRendering; };
       defaultText = "pkgs.callPackage ./happ.nix { }";
       description = "The Happ package to use.";
+    };
+
+    forceXwayland = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Force Happ to run through XWayland (XCB) instead of its bundled Qt6
+        Wayland plugins, which are dropped from the package entirely. Works
+        around a silent startup crash on wlroots-based Wayland compositors
+        (Hyprland, Sway, ...) where the bundled Qt6 Wayland integration is
+        incompatible. Only affects the default `package` build above; has
+        no effect if you override `services.happ.package` yourself.
+      '';
+    };
+
+    forceSoftwareRendering = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Force Happ's Qt Quick UI to render in software (`QML_SCENE_GRAPH=software`,
+        `LIBGL_ALWAYS_SOFTWARE=1`). Independent of `forceXwayland` -- use this if
+        Happ's UI renders incorrectly or not at all due to a GPU/driver issue,
+        regardless of which Qt platform backend is in use. Only affects the
+        default `package` build above; has no effect if you override
+        `services.happ.package` yourself.
+      '';
     };
 
     tunInterface = mkOption {

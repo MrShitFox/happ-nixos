@@ -48,6 +48,8 @@ sudo nixos-rebuild switch
 | --- | --- | --- |
 | `services.happ.enable` | `false` | Enable the Happ client and the `happd` daemon. |
 | `services.happ.package` | built from `happ.nix` | Override the Happ package. |
+| `services.happ.forceXwayland` | `false` | Run Happ through XWayland instead of its bundled Qt6 Wayland plugins. See [Wayland / Hyprland crash](#wayland--hyprland-crash) below. |
+| `services.happ.forceSoftwareRendering` | `false` | Force software rendering for Happ's Qt Quick UI. See [Wayland / Hyprland crash](#wayland--hyprland-crash) below. |
 | `services.happ.tunInterface` | `"tun0"` | TUN device trusted by the firewall. |
 
 ## The HWID fix
@@ -60,6 +62,32 @@ the client shows a blank HWID. The module links it to the real machine id:
 ```nix
 systemd.tmpfiles.rules = [ "L+ /var/lib/dbus/machine-id - - - - /etc/machine-id" ];
 ```
+
+## Wayland / Hyprland crash
+
+Happ's bundled Qt6 Wayland plugins can crash the client silently on
+wlroots-based compositors (Hyprland, Sway, ...) — an ABI mismatch or missing
+dependency against what the vendor shipped. If Happ doesn't start under one
+of these, set:
+
+```nix
+services.happ.forceXwayland = true;
+```
+
+This drops the bundled Wayland plugins from the package and pins Qt to XCB
+(XWayland), which sidesteps the crash. Left off by default since it's
+unconfirmed whether the crash affects compositors with more mature Qt6
+Wayland support (GNOME, KDE).
+
+If the UI still renders incorrectly (or not at all) after that — a separate,
+GPU/driver-level issue — also set:
+
+```nix
+services.happ.forceSoftwareRendering = true;
+```
+
+This is independent of `forceXwayland`: it forces Qt Quick to render in
+software regardless of which platform backend (Wayland or XCB) is active.
 
 ## Updating
 

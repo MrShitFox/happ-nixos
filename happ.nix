@@ -1,7 +1,21 @@
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs ? import <nixpkgs> { }, forceXwayland ? false, forceSoftwareRendering ? false }:
 
 let
   lib = pkgs.lib;
+
+  # Happ's bundled Qt6 Wayland plugins crash the client silently on
+  # wlroots-based compositors (Hyprland, Sway, ...) -- ABI mismatch or
+  # missing deps against what the vendor shipped. forceXwayland drops those
+  # plugins from the package and pins the Qt platform to xcb (XWayland) so
+  # Qt never tries to load them.
+  qtPlatformArgs = lib.optionalString forceXwayland "--set QT_QPA_PLATFORM xcb";
+
+  # Separate from forceXwayland: some GPU/driver combos render Happ's Qt
+  # Quick UI incorrectly (or not at all) even under XWayland. This forces
+  # software rendering as an independent escape hatch, since it addresses a
+  # driver-level rendering issue rather than the Wayland plugin crash.
+  softwareRenderArgs = lib.optionalString forceSoftwareRendering
+    "--set QML_SCENE_GRAPH software --set LIBGL_ALWAYS_SOFTWARE 1";
 
   # External command-line tools that the Happ client and its helper scripts shell
   # out to at runtime. Wrapping them into Happ's PATH makes the client
@@ -76,12 +90,21 @@ pkgs.stdenv.mkDerivation rec {
       cp -r usr/share/* $out/share/
     fi
 
+    ${lib.optionalString forceXwayland ''
+      # Remove the bundled Wayland plugins before autoPatchelf/fixup even
+      # sees them, so Qt has no native Wayland backend to fall back to.
+      rm -rf $out/happ/lib/plugins/wayland-*
+      rm -f $out/happ/lib/plugins/platforms/libqwayland-*.so
+    ''}
+
     # Wrap both the GUI (Happ) and the privileged control daemon (happd).
     for exe in Happ happd; do
       wrapProgram $out/happ/bin/$exe \
         --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ pkgs.openssl ]}" \
         --prefix PATH : "${lib.makeBinPath runtimeDeps}" \
-        --set SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        --set SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
+        ${qtPlatformArgs} \
+        ${softwareRenderArgs}
     done
 
     ln -s $out/happ/bin/Happ $out/bin/happ
